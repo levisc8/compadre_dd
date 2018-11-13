@@ -74,8 +74,15 @@ for(i in seq_len(n_gen)) {
   p_vec <- as.numeric(output[i, 1:3])
   new_p_vec <- eval_tidy(data_mat) %*% p_vec
   output[(i+1), 1:3] <- new_p_vec
+  a <- new_p_vec[3]
+  r <- new_p_vec[2]
+  s <- new_p_vec[1]
   output[(i+1), 4] <- sum(new_p_vec)
   output[(i+1), 5] <- sum(new_p_vec)/output[i, 4]
 
 }
 
+par(mfrow = c(2,3))
+for(i in seq_along(output)) {
+  plot(output[ ,i])
+}
