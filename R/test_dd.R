@@ -1,6 +1,6 @@
 # Test Compadre DD ideas
 
-rm(list = ls())
+# rm(list = ls())
 library(rlang)
 
 
