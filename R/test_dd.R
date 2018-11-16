@@ -26,7 +26,7 @@ source('R/functions.R')
 # quoted, but i think we can actually update the code to figure that part out on it's
 # own using a "function factory approach". This is really just a proof of concept
 
-mat_exprs <- make_mat_exprs(
+exprs <- make_mat_exprs(
   s_2 = quo(1/(1 + exp(bs2_2 * eval_tidy(u_i) + bs2_1 * eval_tidy(t_i) + bs2_0))),
   s_3 = quo(exp(bs3_1 * log(r + 1))),
   f = quo(exp(bf_1 * a + bf_0)),
@@ -46,7 +46,7 @@ mat_exprs <- make_mat_exprs(
 )
 
 # Use this for constants and the initial population vector
-data_list <- make_data_list(
+data <- make_data_list(
   v = 0.8228,
   g_1 = 0.5503,
   g_2 = 0.3171,
@@ -60,13 +60,35 @@ data_list <- make_data_list(
   initial_population_vector = c(s = 10, r = 0, a = 0)
 )
 
+# load in old compadre data set
+library(RcompadreTidy)
+data("Compadre")
 
-hold_breath <- iterate_dd_mat(mat_exprs = mat_exprs,
-                              data_list = data_list,
+dd_mat <- list(matA = list(mat_exprs = exprs,
+                           data_list = data))
+
+class(dd_mat) <- 'CompadreDDM'
+
+Compadre@data[151, ] <- NA
+Compadre@data$matdata[151] <- dd_mat
+
+hold_breath <- iterate_dd_mat(dd_mat,
                               n_generations = 100)
 
 complete_data <- do.call(cbind, hold_breath)
 par(mfrow = c(3,2))
+
 for(i in seq_along(complete_data)) {
   plot(complete_data[ ,i], type = 'l', main = names(complete_data)[i])
 }
+
+# Now, try it with user defined list (the same as above, but a different interface)
+
+hold_breath_again <- iterate_dd_mat(data_list = data,
+                                    mat_exprs = exprs,
+                                    n_generations = 100)
+
+# moment of truth!
+identical(hold_breath, hold_breath_again)
+
+# Yay!

@@ -8,22 +8,70 @@
 # mat_exprs: Must contain all density dependent expressions and an expression
 # to generate the matrix itself. terms in density depedendent expressions that
 # are themselves functions of something else must be wrapped in calls to
-# rlang::eval_tidy and all who expressions must be wrapped in calls to rlang::quo
+# rlang::eval_tidy and all expressions must be wrapped in calls to rlang::quo.
+# Additionally, all density dependent terms must be wrapped in eval_tidy in the
+# matrix expression itself.
 
 library(rlang)
 
-iterate_dd_mat <- function(mat_exprs,
-                           data_list,
+iterate_dd_mat <- function(...,
                            n_generations,
-                           target_output = c('stage_vectors',
-                                             'growth_rates'), # for now
-                           init_p_vec = NULL) {
+                           target_output,
+                           init_p_vec) {
+
+  UseMethod('iterate_dd_mat')
+}
+
+iterate_dd_mat.CompadreDDM <- function(dd_mat_data,
+                                       n_generations,
+                                       target_output = c('stage_vectors',
+                                                         'growth_rates'),
+                                       init_p_vec = NULL) {
+
+  # potential to make dd_mat_data[[fun_arg]] so you can choose which matrix
+  # to iterate (U, F, C). For now, just implement for matA
+
+  dd_mat_data <- dd_mat_data$matA
+
+  .iterate_dd_mat_impl(dd_mat_data,
+                       n_generations,
+                       target_output,
+                       init_p_vec)
+
+}
+
+iterate_dd_mat.list <- function(data_list,
+                                mat_exprs,
+                                n_generations,
+                                target_output = c('stage_vectors',
+                                                    'growth_rates'), # for now
+                                init_p_vec = NULL) {
+
+  dd_mat_data <- list(data_list = data_list,
+                      mat_exprs = mat_exprs)
+
+  .iterate_dd_mat_impl(dd_mat_data,
+                       n_generations,
+                       target_output,
+                       init_p_vec)
+
+}
+
+.iterate_dd_mat_impl <- function(mat_data,
+                                 n_generations,
+                                 target_output,
+                                 init_p_vec) {
+
+  data_list <- mat_data$data_list
+  mat_exprs <- mat_data$mat_exprs
 
   if(is.null(init_p_vec)) {
     init_p_vec <- data_list$p_vec
   }
+
   # insulated environment for the iterations to take place
   eval_env <- rlang::env()
+
   # add data
   rlang::env_bind(eval_env,
                   !!! data_list,
@@ -67,6 +115,7 @@ iterate_dd_mat <- function(mat_exprs,
   }
 
   return(output)
+
 }
 
 update_dd_outputs <- function(out_obj,
@@ -114,6 +163,9 @@ make_data_list <- function(...,
 make_mat_exprs <- function(...) {
 
   out <- enquos(...)
+
+  # here is where we need to add code to inspect equations and determine who
+  # gets an rlang::eval_tidy() wrapped around it
 
   return(out)
 }
