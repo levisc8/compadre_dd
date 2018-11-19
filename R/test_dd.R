@@ -96,8 +96,8 @@ hold_breath <- iterate_dd_mat(dd_mat,
 
 # Some weird stuff going on w/ nesting it in Compadre. Obviously, this needs
 # to be solved.
-test <- iterate_dd_mat(Compadre@data$matdata[[151]],
-                       n_generations = 100)
+# test <- iterate_dd_mat(Compadre@data$matdata[[151]],
+#                        n_generations = 100)
 
 complete_data <- do.call(cbind, hold_breath)
 par(mfrow = c(3,2))

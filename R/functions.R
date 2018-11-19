@@ -197,14 +197,8 @@ wrap_eval_tidys <- function(mat_exprs) {
   return(text_list)
 }
 
-# Regex hellhole abstraction mechanism. Please don't find bugs
 make_mat_regexpr <- function(var) {
-  if(grepl('_', var)) {
-    paste0('(', var, ')')
-  } else {
     paste0('(\\b', var, '\\b)')
-  }
-
 }
 
 wrap_quos <- function(mat_exprs_w_evals) {
