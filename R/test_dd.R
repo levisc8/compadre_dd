@@ -22,26 +22,45 @@ source('R/functions.R')
 # s_1 = a range between 0.1 and 0.9. Apparently they couldn't test this
 
 # mat_exprs holds the density dependent expressions and the actualy matrix itself.
-# right now, it's a bit clunky in that you have to specify who gets evaluated and
-# quoted, but i think we can actually update the code to figure that part out on it's
-# own using a "function factory approach". This is really just a proof of concept
+# make_mat_exprs is now smart enough figure out who needs quoting and evaluating calls,
+# so Compadrinos will not need to understand tidy_eval provided the expressions
+# and data are correctly specified
+
+# exprs <- make_mat_exprs(
+#   s_2 = quo(1/(1 + exp(bs2_2 * eval_tidy(u_i) + bs2_1 * eval_tidy(t_i) + bs2_0))),
+#   s_3 = quo(exp(bs3_1 * log(r + 1))),
+#   f = quo(exp(bf_1 * a + bf_0)),
+#   u_i = quo(r * a),
+#   t_i = quo(r + a),
+#   mat_expr = quo(
+#     matrix(
+#       c(
+#         1 - g_2, 0, v * (1-g_1) * eval_tidy(f),
+#         g_2 * s_1, 0, v * g_1 * s_1 * eval_tidy(f),
+#         0, eval_tidy(s_2) * eval_tidy(s_3), 0
+#       ),
+#       nrow = 3,
+#       byrow = TRUE
+#     )
+#   )
+# )
 
 exprs <- make_mat_exprs(
-  s_2 = quo(1/(1 + exp(bs2_2 * eval_tidy(u_i) + bs2_1 * eval_tidy(t_i) + bs2_0))),
-  s_3 = quo(exp(bs3_1 * log(r + 1))),
-  f = quo(exp(bf_1 * a + bf_0)),
-  u_i = quo(r * a),
-  t_i = quo(r + a),
-  mat_expr = quo(
+  s_2 = 1/(1 + exp(bs2_2 * u_i + bs2_1 * t_i + bs2_0)),
+  s_3 = exp(bs3_1 * log(r + 1)),
+  f = exp(bf_1 * a + bf_0),
+  u_i = r * a,
+  t_i = r + a,
+  mat_expr =
     matrix(
       c(
-        1 - g_2, 0, v * (1-g_1) * eval_tidy(f),
-        g_2 * s_1, 0, v * g_1 * s_1 * eval_tidy(f),
-        0, eval_tidy(s_2) * eval_tidy(s_3), 0
+        1 - g_2, 0, v * (1-g_1) * f,
+        g_2 * s_1, 0, v * g_1 * s_1 * f,
+        0, s_2 * s_3, 0
       ),
       nrow = 3,
       byrow = TRUE
-    )
+
   )
 )
 
@@ -74,6 +93,11 @@ Compadre@data$matdata[151] <- dd_mat
 
 hold_breath <- iterate_dd_mat(dd_mat,
                               n_generations = 100)
+
+# Some weird stuff going on w/ nesting it in Compadre. Obviously, this needs
+# to be solved.
+test <- iterate_dd_mat(Compadre@data$matdata[[151]],
+                       n_generations = 100)
 
 complete_data <- do.call(cbind, hold_breath)
 par(mfrow = c(3,2))

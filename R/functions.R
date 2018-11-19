@@ -72,6 +72,8 @@ iterate_dd_mat.list <- function(data_list,
   # insulated environment for the iterations to take place
   eval_env <- rlang::env()
 
+  # Set this as the environment for each quosure in mat_exprs
+  lapply(mat_exprs, function(x) quo_set_env(x, eval_env))
   # add data
   rlang::env_bind(eval_env,
                   !!! data_list,
@@ -162,10 +164,53 @@ make_data_list <- function(...,
 # calls
 make_mat_exprs <- function(...) {
 
-  out <- enquos(...)
+  mat_exprs <- enquos(...)
 
-  # here is where we need to add code to inspect equations and determine who
-  # gets an rlang::eval_tidy() wrapped around it
+  text_list <- wrap_eval_tidys(mat_exprs)
+
+  out <- lapply(text_list, wrap_quos)
 
   return(out)
+}
+
+wrap_eval_tidys <- function(mat_exprs) {
+
+  # turn quos into strings, extract the LHS variable names
+  text_list <- lapply(mat_exprs, rlang::quo_text)
+  LHS <- names(text_list)
+
+  for(i in seq_along(text_list)) {
+    for(j in seq_along(LHS)){
+
+      # substitute eval_tidy(var) if anything in right hand side appears in
+      # left hand side
+      reg_expression <- make_mat_regexpr(LHS[j])
+
+      text_list[[i]] <- gsub(reg_expression,
+                             paste0('eval_tidy(', LHS[j], ')'),
+                             text_list[[i]])
+
+    }
+  }
+
+
+  return(text_list)
+}
+
+# Regex hellhole abstraction mechanism. Please don't find bugs
+make_mat_regexpr <- function(var) {
+  if(grepl('_', var)) {
+    paste0('(', var, ')')
+  } else {
+    paste0('(\\b', var, '\\b)')
+  }
+
+}
+
+wrap_quos <- function(mat_exprs_w_evals) {
+
+  string <- paste0('quo(', mat_exprs_w_evals, ')')
+  out <- rlang::parse_expr(string)
+  enquo(out)
+
 }
