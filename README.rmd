@@ -128,14 +128,6 @@ for(i in seq(0.01, 1, 0.05)) {
 }
 
 par(mfrow = c(4,5))
-# 
-# lapply(1:20, function(x) {
-#   plot(lambdas[[x]], 
-#        main = names(lambdas)[x],
-#        type = 'l')
-#   
-#   return(invisible(x)) # so you don't get 20 NULLs clogging your console
-#   })
 
 lapply(1:20, function(x) {
   plot(densities[[x]], 

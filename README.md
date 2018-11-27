@@ -106,24 +106,11 @@ for(i in seq(0.01, 1, 0.05)) {
 }
 
 par(mfrow = c(4,5))
-# 
-# lapply(1:20, function(x) {
-#   plot(lambdas[[x]], 
-#        main = names(lambdas)[x],
-#        type = 'l')
-#   
-#   return(invisible(x)) # so you don't get 20 NULLs clogging your console
-#   })
 
 lapply(1:20, function(x) {
   plot(densities[[x]], 
        main = names(densities)[x],
        type = 'l')
   
-  return(invisible(x)) # so you don't get 20 NULLs clogging your console
   })
 ```
-
-### Environmental stochasticity
-
-This one is a bit trickier because environments can be represented in a number of ways, but is still feasible because each representation is still just a series of expressions. Since this is the case, it retains the `CompadreDDM` class, though it may be that I add a `CompadreEDM` class or something for clarity.
