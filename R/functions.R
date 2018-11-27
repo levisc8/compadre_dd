@@ -75,30 +75,22 @@ iterate_dd_mat.list <- function(data_list,
   eval_env <- rlang::env()
 
   # Set this as the environment for each quosure in mat_exprs
-  lapply(mat_exprs, function(x) quo_set_env(x, eval_env))
-  # add data
+  mat_exprs <- lapply(mat_exprs, function(x) quo_set_env(x, eval_env))
+
+  # add data to eval_env
   rlang::env_bind(eval_env,
                   !!! data_list,
                   !!! init_p_vec)
 
   # create lazy bindings to the evaluation environment
-  rlang::env_bind_exprs(eval_env,
-                        !!! mat_exprs,
-                        .eval_env = eval_env)
+  rlang::env_bind_lazy(eval_env,
+                       !!! mat_exprs,
+                       .eval_env = eval_env)
 
   # set up place to store outputs of interest
-  output <- list()
-  if('stage_vectors' %in% target_output) {
-    output$stage_vectors <- data.frame(t(init_p_vec),
-                                       n_tot = sum(init_p_vec))
-    output$stage_vectors[2:n_generations, ] <- NA_real_
-  }
-
-  if('growth_rates' %in% target_output) {
-    output$growth_rates <- data.frame(n_tot = c(sum(init_p_vec),
-                                                rep(NA_real_, n_generations - 1)),
-                                      lambda = rep(NA_real_, n_generations))
-  }
+  output <- initialize_dd_outputs(n_generations,
+                                  target_output,
+                                  init_p_vec)
 
   # iterate!
   for(i in seq(2, n_generations, 1)) {
@@ -122,17 +114,39 @@ iterate_dd_mat.list <- function(data_list,
 
 }
 
+initialize_dd_outputs <- function(n_generations,
+                                  target_output,
+                                  init_p_vec) {
+
+  output <- list()
+  if('stage_vectors' %in% target_output) {
+    output$stage_vectors <- data.frame(t(init_p_vec),
+                                       n_tot = sum(init_p_vec))
+    output$stage_vectors[2:n_generations, ] <- NA_real_
+  }
+
+  if('growth_rates' %in% target_output) {
+    output$growth_rates <- data.frame(n_tot = c(sum(init_p_vec),
+                                                rep(NA_real_, n_generations - 1)),
+                                      lambda = rep(NA_real_, n_generations))
+  }
+
+  return(output)
+
+}
+
+
 update_dd_outputs <- function(out_obj,
                               to_insert,
                               iteration,
-                              targets) {
+                              target_output) {
 
-  if('stage_vectors' %in% targets) {
+  if('stage_vectors' %in% target_output) {
     out_obj$stage_vectors[(iteration), 1:(length(to_insert))] <- to_insert
     out_obj$stage_vectors$n_tot[(iteration)] <- sum(to_insert)
   }
 
-  if('growth_rates' %in% targets) {
+  if('growth_rates' %in% target_output) {
     out_obj$growth_rates$n_tot[iteration] <- sum(to_insert)
 
     out_obj$growth_rates$lambda[iteration] <-
@@ -164,9 +178,16 @@ make_data_list <- function(...,
 # These should contain all of the equations as quosures. Additionally, elements
 # that are themselves functions of something else should be wrapped in eval_tidy
 # calls
-make_mat_exprs <- function(...) {
+make_mat_exprs <- function(...,
+                           mat_expr = NULL) {
 
   mat_exprs <- enquos(...)
+  mat_exprs$mat_expr <- enquo(mat_expr)
+
+  if(quo_is_null(mat_exprs$mat_expr)) {
+    stop('Must supply an expression for "mat_expr".',
+         call. = FALSE)
+  }
 
   text_list <- wrap_eval_tidys(mat_exprs)
 
@@ -189,7 +210,7 @@ wrap_eval_tidys <- function(mat_exprs) {
       reg_expression <- make_mat_regexpr(LHS[j])
 
       text_list[[i]] <- gsub(reg_expression,
-                             paste0('eval_tidy(', LHS[j], ')'),
+                             paste0('rlang::eval_tidy(', LHS[j], ')'),
                              text_list[[i]])
 
     }
@@ -205,7 +226,7 @@ make_mat_regexpr <- function(var) {
 
 wrap_quos <- function(mat_exprs_w_evals) {
 
-  string <- paste0('quo(', mat_exprs_w_evals, ')')
+  string <- paste0('rlang::quo(', mat_exprs_w_evals, ')')
   out <- rlang::parse_expr(string)
   enquo(out)
 

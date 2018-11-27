@@ -4,13 +4,20 @@ Attempting to create a framework for density dependence in Comapdre
 
 This is pretty experimental, but the idea is to store matrix elements (which may be constants *or* expressions) in a long data format, then use a couple functions to take a user- or database supplied population vector and generate a density dependent matrix. Outputs are then generated via iteration.
 
+These functions depend on `rlang` to work. `rlang` itself has no further dependencies, so this would be a fairly lightweight addition to `Rcompadre`. Unfortunately, they do make use of `env_bind_lazy()` which is currently listed as experimental in the `rlang` [lifecycle](https://rlang.r-lib.org/reference/lifecycle.html). If this is dropped in subsequent versions, we'll need to implement the delayed assignment manually.
+
 ### Density-dependent matrices
 
 These are now implemented. `iterate_dd_mat()` can handle both user-supplied and data base matrices. Additionally, `make_mat_exprs()` is now smart enough to know when to wrap elements in calls to `eval_tidy()` and `quo()` so that end users and programmers do not need to fully understand how/why these are being used.
 
-`CompadreDDM` matrices do not look like other matrices stored in Compadre. They are lists with 2 elements: a `data_list` which contains values for each parameter and a `mat_exprs` list which contains expressions to calculate density dependent vital rates (e.g. survival, growth, reproduction). Additionally, the `mat_exprs` list contains an expression for the matrix (`mat_expr`). Hopefully, the example below clarifies how these work.
+`CompadreDDM` matrices do not look like other matrices stored in Compadre. They are lists with 2 elements: a `data_list` which contains values for each parameter and a `mat_exprs` list which contains expressions to calculate density dependent vital rates (e.g. survival, growth, reproduction). Each of these can accept any number of named values and has one additional required argument. `data_list` requires a named vector called `initial_population_vector` and the `mat_exprs` list requiress an expression for the matrix (`mat_expr`). Hopefully, the example below clarifies how these functions work.
 
 ``` r
+# This is not yet part of the Rcompadre package, so you'll need source()
+# the functions
+
+source('R/functions.R')
+
 # create expressions for each vital rate in the matrix using make_mat_exprs()
 
 exprs <- make_mat_exprs(
@@ -32,7 +39,8 @@ exprs <- make_mat_exprs(
   )
 )
 
-# Use this for constants and the initial population vector
+# Use make_data_list() for constants and the initial population vector
+
 data <- make_data_list(
   v = 0.8228,
   g_1 = 0.5503,
@@ -50,10 +58,11 @@ data <- make_data_list(
 
 Note that all constants in the `mat_exprs` list appear in the `data_list`. This includes coefficients in the density dependent expressions (`bs2_0`, `bs2_1`, `bs2_2`, `bs3_0`, `bs3_1` `bf_0`, `bf_1`).
 
-If users are interested in exploring how altering constant vital rates alters the way density dependence plays out, this is as simple as looping across the `make_data_list()` call and substituting in new values.
+If you are interested in exploring how altering constant vital rates changes the way density dependence plays out, you can loop across the `make_data_list()` call and substitute in new values. You can do the same thing for the coefficients in each density dependent expression.
 
 ``` r
 source('R/functions.R')
+
 # make this outside the loop, the expressions are not changing
 exprs <- make_mat_exprs(
   s_2 = 1/(1 + exp(bs2_2 * u_i + bs2_1 * t_i + bs2_0)),
@@ -89,7 +98,7 @@ for(i in seq(0.01, 1, 0.05)) {
     bs3_1 = -0.289,
     bf_1 = -0.0389,
     bf_0 = 7.489,
-    s_1 = i,
+    s_1 = i, # note the substitution here
     initial_population_vector = c(s = 10, r = 0, a = 0)
   )
   
@@ -105,6 +114,8 @@ for(i in seq(0.01, 1, 0.05)) {
                                                     FUN = sum)
 }
 
+# plot the densities. You can change "densities" to "lambdas" in the code
+# below to examine growth rates between each iteration
 par(mfrow = c(4,5))
 
 lapply(1:20, function(x) {
@@ -114,3 +125,7 @@ lapply(1:20, function(x) {
   
   })
 ```
+
+### Environmentally-dependent matrices
+
+Coming soon. I think these will be virtually identical to density dependent ones, with vital rates calculated by `mat_exprs` and constants supplied in the `data_list`. There may be an addition of n optional `env_mat` slot to allow for environmental transition matrices, but I am hesitant to give those special status. Experimental implementation coming soon.
