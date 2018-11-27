@@ -67,6 +67,8 @@ iterate_dd_mat.list <- function(data_list,
 
   if(is.null(init_p_vec)) {
     init_p_vec <- data_list$p_vec
+  } else {
+    data_list$p_vec <- init_p_vec
   }
 
   # insulated environment for the iterations to take place
@@ -77,7 +79,7 @@ iterate_dd_mat.list <- function(data_list,
   # add data
   rlang::env_bind(eval_env,
                   !!! data_list,
-                  !!! data_list$p_vec)
+                  !!! init_p_vec)
 
   # create lazy bindings to the evaluation environment
   rlang::env_bind_exprs(eval_env,
