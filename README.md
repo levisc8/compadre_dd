@@ -4,13 +4,15 @@ Attempting to create a framework for density dependence in Comapdre
 
 This is pretty experimental, but the idea is to store matrix elements (which may be constants *or* expressions) in a long data format, then use a couple functions to take a user- or database supplied population vector and generate a density dependent matrix. Outputs are then generated via iteration.
 
-These functions depend on `rlang` to work. `rlang` itself has no further dependencies, so this would be a fairly lightweight addition to `Rcompadre`. Unfortunately, they do make use of `env_bind_lazy()` which is currently listed as experimental in the `rlang` [lifecycle](https://rlang.r-lib.org/reference/lifecycle.html). If this is dropped in subsequent versions, we'll need to implement the delayed assignment manually.
+These functions depend on `rlang` to work. `rlang` itself has no further dependencies, so this would be a fairly lightweight addition to `Rcompadre`/`popdemo`. Unfortunately, they do make use of `env_bind_lazy()` which is currently listed as experimental in the `rlang` [lifecycle](https://rlang.r-lib.org/reference/lifecycle.html). If this is dropped in subsequent versions, we'll need to implement the delayed assignment manually.
 
 ### Density-dependent matrices
 
-These are now implemented. `iterate_dd_mat()` can handle both user-supplied and data base matrices. Additionally, `make_mat_exprs()` is now smart enough to know when to wrap elements in calls to `eval_tidy()` and `quo()` so that end users and programmers do not need to fully understand how/why these are being used.
+These are now implemented. `iterate_dd_mat()` can handle both user-supplied and data base matrices.
 
 `CompadreDDM` matrices do not look like other matrices stored in Compadre. They are lists with 2 elements: a `data_list` which contains values for each parameter and a `mat_exprs` list which contains expressions to calculate density dependent vital rates (e.g. survival, growth, reproduction). Each of these can accept any number of named values and has one additional required argument. `data_list` requires a named vector called `initial_population_vector` and the `mat_exprs` list requiress an expression for the matrix (`mat_expr`). Hopefully, the example below clarifies how these functions work.
+
+*To-do: incorporate `stringToMatrix` from `Rcompadre` so entering the matrices is easier on Compadrinos*
 
 ``` r
 # This is not yet part of the Rcompadre package, so you'll need source()
@@ -128,4 +130,6 @@ lapply(1:20, function(x) {
 
 ### Environmentally-dependent matrices
 
-Coming soon. I think these will be virtually identical to density dependent ones, with vital rates calculated by `mat_exprs` and constants supplied in the `data_list`. There may be an addition of n optional `env_mat` slot to allow for environmental transition matrices, but I am hesitant to give those special status. Experimental implementation coming soon.
+Iain Stott already has an implementation of these in [popdemo](https://github.com/iainmstott/popdemo). His implementation covers instances where multiple matrices are parameterized with constant values and then are selected either randomly, with Markov Chains, or a user-supplied sequence. I'm working on integrating the density dependent code into the `Projection` class that he wrote for these so that there is a common-ish feel to working with these stochastic matrices.
+
+Still to be implemented are matrices where individual elements are functions of some environmental variable. These will be very similar to the density-dependent matrices, but I'm toying with the idea of adding an additional `env_data` list to the structure. Unfortunately, I have yet to find a paper that reports *all* of the parameters I need to re-create them, so I'm putting this on hold for now to focus on getting the density dependent matrices working across all/as many cases as possible.
